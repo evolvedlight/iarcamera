@@ -1,4 +1,4 @@
-name: Create Timelapse
+name: Create and Deploy Timelapse
 
 on:
   schedule:
@@ -6,11 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  create_timelapse:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,12 +17,34 @@ jobs:
 
       - name: Create timelapse
         run: |
-          convert -delay 10 -loop 0 photos/*.jpg timelapse.gif
+          mkdir -p _site
+          convert -delay 10 -loop 0 photos/*.jpg _site/timelapse.gif
 
-      - name: Commit and push if it changed
+      - name: Create index.html
         run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-          git add timelapse.gif
-          git diff --staged --quiet || git commit -m 'Create timelapse'
-          git push
+          echo '<!DOCTYPE html>' > _site/index.html
+          echo '<html>' >> _site/index.html
+          echo '<head><title>Timelapse</title></head>' >> _site/index.html
+          echo '<body>' >> _site/index.html
+          echo '<img src="timelapse.gif" alt="Timelapse">' >> _site/index.html
+          echo '</body>' >> _site/index.html
+          echo '</html>' >> _site/index.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
