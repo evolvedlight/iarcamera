@@ -1,0 +1,31 @@
+name: Create Timelapse
+
+on:
+  push:
+    paths:
+      - 'photos/**.jpg'
+
+jobs:
+  create_timelapse:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Create timelapse
+        run: |
+          convert -delay 10 -loop 0 photos/*.jpg timelapse.gif
+
+      - name: Commit and push if it changed
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add timelapse.gif
+          git diff --staged --quiet || git commit -m 'Create timelapse'
+          git push
