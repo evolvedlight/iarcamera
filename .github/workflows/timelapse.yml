@@ -12,13 +12,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install ImageMagick
-        run: sudo apt-get update && sudo apt-get install -y imagemagick
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-      - name: Create timelapse
+      - name: Install dependencies
         run: |
-          mkdir -p _site
-          convert -delay 10 -loop 0 photos/*.jpg _site/timelapse.gif
+          python -m pip install --upgrade pip
+          pip install Pillow
+
+      - name: Create Timelapse GIF
+        run: python create_timelapse.py
 
       - name: Create index.html
         run: |
