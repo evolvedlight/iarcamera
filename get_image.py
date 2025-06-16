@@ -3,6 +3,11 @@ import os
 import json
 from datetime import datetime
 
+def set_output(name, value):
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"{name}={value}\n")
+
 # The URL of the API
 api_url = "https://api.yellow.camera/feed/content/YU20VJ7WP"
 
@@ -38,6 +43,7 @@ if response.status_code == 200:
                 # Check if the file already exists
                 if os.path.exists(filepath):
                     print(f"Image {filename} already exists. Skipping download.")
+                    set_output("skipped_image_path", filepath)
                 else:
                     # Download the image
                     print(f"Downloading image from: {image_url}")
@@ -48,11 +54,16 @@ if response.status_code == 200:
                         with open(filepath, "wb") as f:
                             f.write(image_response.content)
                         print(f"Image saved to {filepath}")
+                        set_output("new_image_path", filepath)
                     else:
                         print(f"Failed to download image. Status code: {image_response.status_code}")
+                        set_output("status", "error")
             else:
                 print("Could not find image URL or time in the response.")
+                set_output("status", "error")
     except json.JSONDecodeError:
         print("Failed to decode JSON from the response.")
+        set_output("status", "error")
 else:
     print(f"Failed to fetch feed content. Status code: {response.status_code}")
+    set_output("status", "error")

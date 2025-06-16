@@ -28,12 +28,20 @@ jobs:
           pip install requests
 
       - name: Run script
+        id: fetch_image
         run: python get_image.py
 
+      - name: Report status
+        run: |
+          echo "New image: ${{ steps.fetch_image.outputs.new_image_path }}"
+          echo "Skipped image: ${{ steps.fetch_image.outputs.skipped_image_path }}"
+          echo "Status: ${{ steps.fetch_image.outputs.status }}"
+
       - name: Commit and push if it changed
+        if: steps.fetch_image.outputs.new_image_path != ''
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
-          git add -A photos
-          git diff --staged --quiet || git commit -m 'Add latest image'
+          git add ${{ steps.fetch_image.outputs.new_image_path }}
+          git commit -m "Add latest image: ${{ steps.fetch_image.outputs.new_image_path }}"
           git push
