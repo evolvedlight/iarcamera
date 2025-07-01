@@ -1,4 +1,4 @@
-name: Create and Deploy Timelapse
+name: Create and Deploy Timelapse Video
 
 on:
   schedule:
@@ -20,18 +20,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install Pillow
+          pip install Pillow opencv-python numpy
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
-      - name: Create Timelapse GIF
-        run: python create_timelapse.py
+      - name: Create Timelapse Video
+        run: python create_timelapse_video.py
 
       - name: Create index.html
         run: |
           echo '<!DOCTYPE html>' > _site/index.html
           echo '<html>' >> _site/index.html
-          echo '<head><title>Timelapse</title></head>' >> _site/index.html
+          echo '<head><title>Timelapse Video</title></head>' >> _site/index.html
           echo '<body>' >> _site/index.html
-          echo '<img src="timelapse.gif" alt="Timelapse">' >> _site/index.html
+          echo '<video src="timelapse.mp4" controls style="max-width:100%;height:auto;"></video>' >> _site/index.html
           echo '</body>' >> _site/index.html
           echo '</html>' >> _site/index.html
 

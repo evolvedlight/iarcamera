@@ -35,10 +35,15 @@ if response.status_code == 200:
             time_str = latest_item.get("time")
 
             if image_url and time_str:
-                # Parse the timestamp and format it for the filename
+                # Parse the timestamp and format it for the filename and folder
                 dt_object = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                date_str = dt_object.strftime("%Y-%m-%d")
                 filename = dt_object.strftime("%Y-%m-%d_%H-%M-%S") + ".jpg"
-                filepath = os.path.join("photos", filename)
+                folder_path = os.path.join("photos", date_str)
+                filepath = os.path.join(folder_path, filename)
+
+                # Create the date folder if it doesn't exist
+                os.makedirs(folder_path, exist_ok=True)
 
                 # Check if the file already exists
                 if os.path.exists(filepath):

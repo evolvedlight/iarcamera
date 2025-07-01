@@ -1,10 +1,11 @@
 import glob
 from PIL import Image, ImageDraw, ImageFont
 import os
+import re
 
 def create_timelapse():
     """
-    Creates a highly compressed timelapse GIF from images in the 'photos' directory, overlaying the timestamp from the filename.
+    Creates a highly compressed timelapse GIF from images in the 'photos' directory (including subfolders), overlaying the timestamp from the filename.
     """
     photos_dir = 'photos'
     output_dir = '_site'
@@ -12,12 +13,16 @@ def create_timelapse():
     max_width = 640
     colors = 256
     duration = 200  # ms per frame
-    
+
     # Create the output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
-    # Find all image files and sort them by name
-    image_files = sorted(glob.glob(f'{photos_dir}/*.jpg'))
+    # Find all image files in all subfolders and sort them by name
+    image_files = sorted(glob.glob(f'{photos_dir}/**/*.jpg', recursive=True))
+
+    # Only include files matching the expected filename pattern
+    pattern = re.compile(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.jpg$')
+    image_files = [f for f in image_files if pattern.search(os.path.basename(f))]
 
     if not image_files:
         print("No images found to create a timelapse.")
