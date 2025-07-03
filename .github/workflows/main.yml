@@ -35,13 +35,28 @@ jobs:
         run: |
           echo "New image: ${{ steps.fetch_image.outputs.new_image_path }}"
           echo "Skipped image: ${{ steps.fetch_image.outputs.skipped_image_path }}"
+          echo "Latest image: ${{ steps.fetch_image.outputs.latest_image_path }}"
           echo "Status: ${{ steps.fetch_image.outputs.status }}"
 
       - name: Commit and push if it changed
-        if: steps.fetch_image.outputs.new_image_path != ''
+        if: steps.fetch_image.outputs.new_image_path != '' || steps.fetch_image.outputs.latest_image_path != ''
         run: |
           git config --global user.name 'github-actions'
           git config --global user.email 'github-actions@github.com'
-          git add ${{ steps.fetch_image.outputs.new_image_path }}
-          git commit -m "Add latest image: ${{ steps.fetch_image.outputs.new_image_path }}"
+          
+          # Add files to staging
+          if [ "${{ steps.fetch_image.outputs.new_image_path }}" != "" ]; then
+            git add ${{ steps.fetch_image.outputs.new_image_path }}
+          fi
+          if [ "${{ steps.fetch_image.outputs.latest_image_path }}" != "" ]; then
+            git add ${{ steps.fetch_image.outputs.latest_image_path }}
+          fi
+          
+          # Commit all changes at once
+          if [ "${{ steps.fetch_image.outputs.new_image_path }}" != "" ]; then
+            git commit -m "Add latest image: ${{ steps.fetch_image.outputs.new_image_path }}"
+          else
+            git commit -m "Update latest image: ${{ steps.fetch_image.outputs.latest_image_path }}"
+          fi
+          
           git push
