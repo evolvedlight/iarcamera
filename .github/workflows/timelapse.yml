@@ -29,13 +29,344 @@ jobs:
 
       - name: Create index.html
         run: |
-          echo '<!DOCTYPE html>' > _site/index.html
-          echo '<html>' >> _site/index.html
-          echo '<head><title>Timelapse Video</title></head>' >> _site/index.html
-          echo '<body>' >> _site/index.html
-          echo '<video src="timelapse.mp4" controls style="max-width:100%;height:auto;"></video>' >> _site/index.html
-          echo '</body>' >> _site/index.html
-          echo '</html>' >> _site/index.html
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Timelapse Video - IP Camera</title>
+              
+              <!-- Video.js CSS -->
+              <link href="https://vjs.zencdn.net/8.16.1/video-js.css" rel="stylesheet">
+              
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                      margin: 0;
+                      padding: 20px;
+                      background-color: #f5f5f5;
+                  }
+                  
+                  .container {
+                      max-width: 1200px;
+                      margin: 0 auto;
+                      background: white;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                      overflow: hidden;
+                  }
+                  
+                  .header {
+                      padding: 20px;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                  }
+                  
+                  .header h1 {
+                      margin: 0;
+                      font-size: 2rem;
+                      font-weight: 600;
+                  }
+                  
+                  .header p {
+                      margin: 10px 0 0 0;
+                      opacity: 0.9;
+                  }
+                  
+                  .video-container {
+                      position: relative;
+                      background: #000;
+                  }
+                  
+                  .video-js {
+                      width: 100%;
+                      height: auto;
+                  }
+                  
+                  .video-js .vjs-big-play-button {
+                      background-color: rgba(43, 51, 63, 0.8);
+                      border: none;
+                      border-radius: 50%;
+                      width: 80px;
+                      height: 80px;
+                      line-height: 80px;
+                      font-size: 2.5rem;
+                      top: 50%;
+                      left: 50%;
+                      transform: translate(-50%, -50%);
+                  }
+                  
+                  .video-js .vjs-big-play-button:hover {
+                      background-color: rgba(43, 51, 63, 1);
+                  }
+                  
+                  .info-panel {
+                      padding: 20px;
+                      background: #f8f9fa;
+                      border-top: 1px solid #e9ecef;
+                  }
+                  
+                  .info-grid {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                      gap: 20px;
+                      margin-top: 10px;
+                  }
+                  
+                  .info-item {
+                      background: white;
+                      padding: 15px;
+                      border-radius: 6px;
+                      border: 1px solid #e9ecef;
+                  }
+                  
+                  .info-item h3 {
+                      margin: 0 0 8px 0;
+                      color: #495057;
+                      font-size: 0.9rem;
+                      font-weight: 600;
+                      text-transform: uppercase;
+                      letter-spacing: 0.5px;
+                  }
+                  
+                  .info-item p {
+                      margin: 0;
+                      color: #6c757d;
+                      font-size: 0.95rem;
+                  }
+                  
+                  .loading-overlay {
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      width: 100%;
+                      height: 100%;
+                      background: rgba(0,0,0,0.8);
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: white;
+                      font-size: 1.2rem;
+                      z-index: 1000;
+                  }
+                  
+                  .loading-overlay.hidden {
+                      display: none;
+                  }
+                  
+                  .spinner {
+                      border: 3px solid rgba(255,255,255,0.3);
+                      border-radius: 50%;
+                      border-top: 3px solid white;
+                      width: 40px;
+                      height: 40px;
+                      animation: spin 1s linear infinite;
+                      margin-right: 15px;
+                  }
+                  
+                  @keyframes spin {
+                      0% { transform: rotate(0deg); }
+                      100% { transform: rotate(360deg); }
+                  }
+                  
+                  @media (max-width: 768px) {
+                      body {
+                          padding: 10px;
+                      }
+                      
+                      .header h1 {
+                          font-size: 1.5rem;
+                      }
+                      
+                      .info-grid {
+                          grid-template-columns: 1fr;
+                      }
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>IP Camera Timelapse</h1>
+                      <p>High-quality timelapse video from continuous camera monitoring</p>
+                  </div>
+                  
+                  <div class="video-container">
+                      <div class="loading-overlay" id="loading-overlay">
+                          <div class="spinner"></div>
+                          <span>Loading video...</span>
+                      </div>
+                      
+                      <video
+                          id="timelapse-video"
+                          class="video-js vjs-default-skin"
+                          controls
+                          preload="metadata"
+                          data-setup="{}"
+                          poster=""
+                          width="1280"
+                          height="720">
+                          <source src="timelapse.mp4" type="video/mp4">
+                          <p class="vjs-no-js">
+                              To view this video please enable JavaScript, and consider upgrading to a web browser that
+                              <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>.
+                          </p>
+                      </video>
+                  </div>
+                  
+                  <div class="info-panel">
+                      <div class="info-grid">
+                          <div class="info-item">
+                              <h3>Video Quality</h3>
+                              <p>High-definition 1280x720 at 10 FPS</p>
+                          </div>
+                          <div class="info-item">
+                              <h3>Compression</h3>
+                              <p>H.264 optimized for web playback</p>
+                          </div>
+                          <div class="info-item">
+                              <h3>Features</h3>
+                              <p>Timestamp overlay, adaptive quality</p>
+                          </div>
+                          <div class="info-item">
+                              <h3>Playback</h3>
+                              <p>Progressive loading, responsive design</p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Video.js JavaScript -->
+              <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
+              
+              <script>
+                  // Initialize Video.js player with performance optimizations
+                  var player = videojs('timelapse-video', {
+                      // Performance optimizations
+                      preload: 'metadata',
+                      responsive: true,
+                      fluid: true,
+                      fill: false,
+                      
+                      // Enhanced controls
+                      controls: true,
+                      playbackRates: [0.25, 0.5, 1, 1.5, 2, 4],
+                      
+                      // Quality and performance settings
+                      html5: {
+                          vhs: {
+                              enableLowInitialPlaylist: true,
+                              smoothQualityChange: true,
+                              overrideNative: true
+                          },
+                          nativeVideoTracks: false,
+                          nativeAudioTracks: false,
+                          nativeTextTracks: false
+                      },
+                      
+                      // UI customizations
+                      bigPlayButton: true,
+                      textTrackSettings: false,
+                      
+                      // Performance monitoring
+                      debug: false
+                  });
+
+                  // Handle loading states
+                  var loadingOverlay = document.getElementById('loading-overlay');
+                  
+                  player.ready(function() {
+                      console.log('Video.js player is ready');
+                      
+                      // Hide loading overlay when video is ready to play
+                      player.on('canplay', function() {
+                          loadingOverlay.classList.add('hidden');
+                      });
+                      
+                      // Show loading overlay when buffering
+                      player.on('waiting', function() {
+                          loadingOverlay.classList.remove('hidden');
+                      });
+                      
+                      // Hide loading overlay when playing
+                      player.on('playing', function() {
+                          loadingOverlay.classList.add('hidden');
+                      });
+                      
+                      // Error handling
+                      player.on('error', function() {
+                          loadingOverlay.innerHTML = '<div style="text-align: center;"><h3>Error loading video</h3><p>Please refresh the page to try again.</p></div>';
+                          loadingOverlay.classList.remove('hidden');
+                      });
+                      
+                      // Performance monitoring
+                      player.on('loadstart', function() {
+                          console.log('Video loading started');
+                      });
+                      
+                      player.on('progress', function() {
+                          var buffered = player.buffered();
+                          if (buffered.length > 0) {
+                              var percent = (buffered.end(0) / player.duration()) * 100;
+                              console.log('Buffered: ' + Math.round(percent) + '%');
+                          }
+                      });
+                      
+                      // Adaptive quality based on connection
+                      if ('connection' in navigator) {
+                          var connection = navigator.connection;
+                          if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
+                              // For slow connections, start with lower quality
+                              player.ready(function() {
+                                  player.playbackRate(0.5);
+                              });
+                          }
+                      }
+                  });
+
+                  // Keyboard shortcuts for better UX
+                  document.addEventListener('keydown', function(e) {
+                      if (player && !player.paused()) {
+                          switch(e.key) {
+                              case ' ':
+                                  e.preventDefault();
+                                  if (player.paused()) {
+                                      player.play();
+                                  } else {
+                                      player.pause();
+                                  }
+                                  break;
+                              case 'ArrowLeft':
+                                  e.preventDefault();
+                                  player.currentTime(player.currentTime() - 10);
+                                  break;
+                              case 'ArrowRight':
+                                  e.preventDefault();
+                                  player.currentTime(player.currentTime() + 10);
+                                  break;
+                              case 'ArrowUp':
+                                  e.preventDefault();
+                                  player.volume(Math.min(1, player.volume() + 0.1));
+                                  break;
+                              case 'ArrowDown':
+                                  e.preventDefault();
+                                  player.volume(Math.max(0, player.volume() - 0.1));
+                                  break;
+                          }
+                      }
+                  });
+
+                  // Cleanup on page unload
+                  window.addEventListener('beforeunload', function() {
+                      if (player) {
+                          player.dispose();
+                      }
+                  });
+              </script>
+          </body>
+          </html>
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
