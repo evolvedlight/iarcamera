@@ -48,6 +48,15 @@ if response.status_code == 200:
                 # Check if the file already exists
                 if os.path.exists(filepath):
                     print(f"Image {filename} already exists. Skipping download.")
+                    
+                    # Still update latest.jpg with the existing image
+                    latest_filepath = "latest.jpg"
+                    if os.path.exists(filepath):
+                        with open(filepath, "rb") as src, open(latest_filepath, "wb") as dst:
+                            dst.write(src.read())
+                        print(f"Latest image copy updated to {latest_filepath}")
+                        set_output("latest_image_path", latest_filepath)
+                    
                     set_output("skipped_image_path", filepath)
                 else:
                     # Download the image
@@ -59,7 +68,15 @@ if response.status_code == 200:
                         with open(filepath, "wb") as f:
                             f.write(image_response.content)
                         print(f"Image saved to {filepath}")
+                        
+                        # Also save a copy as latest.jpg for static linking in README
+                        latest_filepath = "latest.jpg"
+                        with open(latest_filepath, "wb") as f:
+                            f.write(image_response.content)
+                        print(f"Latest image copy saved to {latest_filepath}")
+                        
                         set_output("new_image_path", filepath)
+                        set_output("latest_image_path", latest_filepath)
                     else:
                         print(f"Failed to download image. Status code: {image_response.status_code}")
                         set_output("status", "error")
