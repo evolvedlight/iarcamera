@@ -93,15 +93,20 @@ if response.status_code == 200:
                     else:
                         print(f"Failed to download image. Status code: {image_response.status_code}")
                         set_output("status", "error")
+                        exit(1)
             else:
                 print("Could not find image URL or time in the response.")
                 set_output("status", "error")
+                exit(1)
     except json.JSONDecodeError:
         print("Failed to decode JSON from the response.")
         set_output("status", "error")
+        exit(1)
     except Exception as e:
         print(f"Unexpected error occurred: {e}")
         set_output("status", "error")
+        exit(1)
 else:
     print(f"Failed to fetch feed content. Status code: {response.status_code}")
     set_output("status", "error")
+    exit(1)
