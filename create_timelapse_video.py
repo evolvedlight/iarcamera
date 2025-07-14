@@ -23,8 +23,23 @@ def create_timelapse_video():
     image_files = sorted(glob.glob(f'{photos_dir}/**/*.jpg', recursive=True))
 
     # Only include files matching the expected filename pattern
+    import datetime
     pattern = re.compile(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.jpg$')
-    image_files = [f for f in image_files if pattern.search(os.path.basename(f))]
+    filtered_files = []
+    for f in image_files:
+        if not pattern.search(os.path.basename(f)):
+            continue
+        # Get parent folder name (date)
+        folder = os.path.basename(os.path.dirname(f))
+        try:
+            date_obj = datetime.datetime.strptime(folder, "%Y-%m-%d")
+            # weekday(): 0=Mon, ..., 5=Sat, 6=Sun
+            if date_obj.weekday() < 5:
+                filtered_files.append(f)
+        except Exception:
+            # If folder name is not a date, skip
+            continue
+    image_files = filtered_files
 
     if not image_files:
         print("No images found to create a timelapse video.")

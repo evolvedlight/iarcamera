@@ -34,13 +34,25 @@ jobs:
           <html lang="en">
           <head>
               <meta charset="UTF-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
               <title>Timelapse Video - IP Camera</title>
               
               <!-- Video.js CSS -->
               <link href="https://vjs.zencdn.net/8.16.1/video-js.css" rel="stylesheet">
-              
               <style>
+                  /* Remove Video.js branding and watermark */
+                  .vjs-logo, .vjs-watermark, .vjs-control-bar .vjs-branding-link, .vjs-control-bar .vjs-branding {
+                      display: none !important;
+                  }
+                  /* Remove big play button branding */
+                  .video-js .vjs-big-play-button::before {
+                      display: none !important;
+                  }
+                  /* Remove any default skin background */
+                  .video-js {
+                      background: #000 !important;
+                  }
+                  
                   body {
                       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                       margin: 0;
@@ -200,18 +212,17 @@ jobs:
                       
                       <video
                           id="timelapse-video"
-                          class="video-js vjs-default-skin"
+                          class="video-js"
                           controls
                           preload="metadata"
                           data-setup="{}"
-                          poster=""
+                          poster="timelapse.gif"
                           width="1280"
-                          height="720">
+                          height="720"
+                          playsinline
+                          webkit-playsinline>
                           <source src="timelapse.mp4" type="video/mp4">
-                          <p class="vjs-no-js">
-                              To view this video please enable JavaScript, and consider upgrading to a web browser that
-                              <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>.
-                          </p>
+                          <!-- No Video.js branding or links -->
                       </video>
                   </div>
                   
@@ -243,17 +254,11 @@ jobs:
               <script>
                   // Initialize Video.js player with performance optimizations
                   var player = videojs('timelapse-video', {
-                      // Performance optimizations
                       preload: 'metadata',
                       responsive: true,
-                      fluid: true,
-                      fill: false,
-                      
-                      // Enhanced controls
+                      // Remove fluid/fill for mobile reliability
                       controls: true,
-                      playbackRates: [0.25, 0.5, 1, 1.5, 2, 4],
-                      
-                      // Quality and performance settings
+                      playbackRates: [0.5, 1, 1.5, 2],
                       html5: {
                           vhs: {
                               enableLowInitialPlaylist: true,
@@ -264,47 +269,41 @@ jobs:
                           nativeAudioTracks: false,
                           nativeTextTracks: false
                       },
-                      
-                      // UI customizations
                       bigPlayButton: true,
                       textTrackSettings: false,
-                      
-                      // Performance monitoring
                       debug: false
                   });
 
                   // Handle loading states
                   var loadingOverlay = document.getElementById('loading-overlay');
-                  
+                  function hideOverlay() {
+                      loadingOverlay.classList.add('hidden');
+                  }
+                  function showOverlay() {
+                      loadingOverlay.classList.remove('hidden');
+                  }
                   player.ready(function() {
-                      console.log('Video.js player is ready');
-                      
-                      // Hide loading overlay when video is ready to play
-                      player.on('canplay', function() {
-                          loadingOverlay.classList.add('hidden');
-                      });
-                      
-                      // Show loading overlay when buffering
-                      player.on('waiting', function() {
-                          loadingOverlay.classList.remove('hidden');
-                      });
-                      
-                      // Hide loading overlay when playing
-                      player.on('playing', function() {
-                          loadingOverlay.classList.add('hidden');
-                      });
-                      
-                      // Error handling
+                      // Hide overlay when video is ready
+                      player.on('canplay', hideOverlay);
+                      player.on('playing', hideOverlay);
+                      player.on('waiting', showOverlay);
                       player.on('error', function() {
                           loadingOverlay.innerHTML = '<div style="text-align: center;"><h3>Error loading video</h3><p>Please refresh the page to try again.</p></div>';
-                          loadingOverlay.classList.remove('hidden');
+                          showOverlay();
                       });
-                      
+                      // Touch support for play/pause
+                      var videoEl = document.getElementById('timelapse-video');
+                      videoEl.addEventListener('touchend', function(e) {
+                          if (player.paused()) {
+                              player.play();
+                          } else {
+                              player.pause();
+                          }
+                      });
                       // Performance monitoring
                       player.on('loadstart', function() {
                           console.log('Video loading started');
                       });
-                      
                       player.on('progress', function() {
                           var buffered = player.buffered();
                           if (buffered.length > 0) {
@@ -312,15 +311,11 @@ jobs:
                               console.log('Buffered: ' + Math.round(percent) + '%');
                           }
                       });
-                      
-                      // Adaptive quality based on connection
+                      // Adaptive quality for slow connections
                       if ('connection' in navigator) {
                           var connection = navigator.connection;
                           if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
-                              // For slow connections, start with lower quality
-                              player.ready(function() {
-                                  player.playbackRate(0.5);
-                              });
+                              player.playbackRate(0.5);
                           }
                       }
                   });
