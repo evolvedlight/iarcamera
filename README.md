@@ -39,7 +39,11 @@ The system uses a Python script (`get_image.py`) that:
 ### Timelapse Generation
 Two types of timelapse media are created:
 - **Video**: High-quality MP4 files with timestamp overlays (`create_timelapse_video.py`)
+  - Default: All weekday images (Monday-Friday)
+  - `last3days`: Images from the last 3 days (including weekends)
+  - `lastXdays`: Images from the last X days (including weekends)
 - **GIF**: Compressed animated GIFs for quick viewing (`create_timelapse.py`)
+- **Last 3 Days**: Dedicated script for recent activity (`create_timelapse_last3days.py`)
 
 ### Automation
 GitHub Actions workflows handle:
@@ -50,11 +54,12 @@ GitHub Actions workflows handle:
 
 ```
 iarcamera/
-├── get_image.py              # Main image fetching script
-├── create_timelapse.py       # GIF timelapse generator
-├── create_timelapse_video.py # Video timelapse generator
-├── move.py                   # Image organization utility
-├── photos/                   # Image archive organized by date
+├── get_image.py                  # Main image fetching script
+├── create_timelapse.py           # GIF timelapse generator
+├── create_timelapse_video.py     # Video timelapse generator (with date filtering)
+├── create_timelapse_last3days.py # Dedicated 3-day timelapse script
+├── move.py                       # Image organization utility
+├── photos/                       # Image archive organized by date
 │   ├── 2025-06-16/
 │   ├── 2025-06-17/
 │   └── ...
@@ -84,7 +89,10 @@ iarcamera/
 4. Create a timelapse:
    ```bash
    python create_timelapse.py        # For GIF
-   python create_timelapse_video.py  # For MP4
+   python create_timelapse_video.py  # For MP4 (all weekdays)
+   python create_timelapse_video.py last3days  # For MP4 (last 3 days)
+   python create_timelapse_video.py last7days  # For MP4 (last 7 days)
+   python create_timelapse_last3days.py        # Dedicated last 3 days script
    ```
 
 ### GitHub Actions Configuration

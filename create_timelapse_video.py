@@ -5,13 +5,23 @@ import re
 import cv2
 import numpy as np
 
-def create_timelapse_video():
+def create_timelapse_video(days_filter=None, weekdays_only=True):
     """
     Creates a high-quality web-compatible MP4 timelapse video from images in the 'photos' directory (including subfolders), overlaying the timestamp from the filename.
+    
+    Args:
+        days_filter (int, optional): If specified, only include images from the last N days. If None, include all images.
+        weekdays_only (bool): If True, only include weekday images (Mon-Fri). If False, include all days.
     """
     photos_dir = 'photos'
     output_dir = '_site'
-    output_video = os.path.join(output_dir, 'timelapse.mp4')
+    
+    # Determine output filename based on filter
+    if days_filter:
+        output_video = os.path.join(output_dir, f'timelapse_last{days_filter}days.mp4')
+    else:
+        output_video = os.path.join(output_dir, 'timelapse.mp4')
+        
     max_width = 1280  # Increase resolution for higher quality
     fps = 10         # Increase frame rate for smoother video
     bitrate = '5000k'  # Target bitrate for higher quality
@@ -25,6 +35,12 @@ def create_timelapse_video():
     # Only include files matching the expected filename pattern
     import datetime
     pattern = re.compile(r'\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.jpg$')
+    
+    # Calculate cutoff date if days_filter is specified
+    cutoff_date = None
+    if days_filter:
+        cutoff_date = (datetime.datetime.now() - datetime.timedelta(days=days_filter)).date()
+    
     filtered_files = []
     for f in image_files:
         if not pattern.search(os.path.basename(f)):
@@ -33,19 +49,36 @@ def create_timelapse_video():
         folder = os.path.basename(os.path.dirname(f))
         try:
             date_obj = datetime.datetime.strptime(folder, "%Y-%m-%d")
-            # weekday(): 0=Mon, ..., 5=Sat, 6=Sun
-            if date_obj.weekday() < 5:
-                filtered_files.append(f)
+            
+            # Apply days filter if specified
+            if cutoff_date and date_obj.date() < cutoff_date:
+                continue
+                
+            # Apply weekdays filter if enabled
+            if weekdays_only and date_obj.weekday() >= 5:  # 0=Mon, ..., 5=Sat, 6=Sun
+                continue
+                
+            filtered_files.append(f)
         except Exception:
             # If folder name is not a date, skip
             continue
     image_files = filtered_files
 
     if not image_files:
-        print("No images found to create a timelapse video.")
+        filter_desc = ""
+        if days_filter:
+            filter_desc += f"from the last {days_filter} days "
+        if weekdays_only:
+            filter_desc += "(weekdays only) "
+        print(f"No images found {filter_desc}to create a timelapse video.")
         return
 
-    print(f"Found {len(image_files)} images. Creating high-quality MP4 timelapse video with timestamps...")
+    filter_desc = ""
+    if days_filter:
+        filter_desc += f"from the last {days_filter} days "
+    if weekdays_only:
+        filter_desc += "(weekdays only) "
+    print(f"Found {len(image_files)} images {filter_desc}. Creating high-quality MP4 timelapse video with timestamps...")
 
     frames = []
     for f in image_files:
@@ -90,7 +123,8 @@ def create_timelapse_video():
     # Optionally, re-encode with ffmpeg for even higher quality and web compatibility
     try:
         import subprocess
-        temp_video = os.path.join(output_dir, 'timelapse_temp.mp4')
+        temp_video_name = f'timelapse_last{days_filter}days_temp.mp4' if days_filter else 'timelapse_temp.mp4'
+        temp_video = os.path.join(output_dir, temp_video_name)
         os.rename(output_video, temp_video)
         ffmpeg_cmd = [
             'ffmpeg', '-y', '-i', temp_video,
@@ -100,9 +134,49 @@ def create_timelapse_video():
         print('Running ffmpeg for final encoding...')
         subprocess.run(ffmpeg_cmd, check=True)
         os.remove(temp_video)
-        print(f"Final high-quality timelapse video saved to {output_video}")
+        filter_desc = ""
+        if days_filter:
+            filter_desc += f"(last {days_filter} days) "
+        if weekdays_only:
+            filter_desc += "(weekdays only) "
+        print(f"Final high-quality timelapse video {filter_desc}saved to {output_video}")
     except Exception as e:
         print(f"ffmpeg not available or failed: {e}")
+        # If ffmpeg fails, rename the temp file back to the final name
+        temp_video_name = f'timelapse_last{days_filter}days_temp.mp4' if days_filter else 'timelapse_temp.mp4'
+        temp_video = os.path.join(output_dir, temp_video_name)
+        if os.path.exists(temp_video):
+            os.rename(temp_video, output_video)
+            filter_desc = ""
+            if days_filter:
+                filter_desc += f"(last {days_filter} days) "
+            if weekdays_only:
+                filter_desc += "(weekdays only) "
+            print(f"Basic timelapse video {filter_desc}saved to {output_video}")
 
 if __name__ == "__main__":
-    create_timelapse_video()
+    import sys
+    
+    # Parse command line arguments
+    days_filter = None
+    weekdays_only = True
+    
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "last3days":
+            days_filter = 3
+            weekdays_only = False
+        elif sys.argv[1].startswith("last") and sys.argv[1].endswith("days"):
+            try:
+                days_filter = int(sys.argv[1][4:-4])  # Extract number from "lastXdays"
+                weekdays_only = False
+            except ValueError:
+                print(f"Invalid argument: {sys.argv[1]}. Use 'last3days' or 'lastXdays' where X is a number.")
+                sys.exit(1)
+        else:
+            print(f"Usage: {sys.argv[0]} [last3days|lastXdays]")
+            print("  No arguments: Create timelapse from all weekday images")
+            print("  last3days: Create timelapse from last 3 days (including weekends)")
+            print("  lastXdays: Create timelapse from last X days (including weekends)")
+            sys.exit(1)
+    
+    create_timelapse_video(days_filter, weekdays_only)
