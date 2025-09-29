@@ -39,8 +39,8 @@ The system uses a Python script (`get_image.py`) that:
 ### Timelapse Generation
 Two types of timelapse media are created:
 - **Video**: High-quality MP4 files with timestamp overlays (`create_timelapse_video.py`)
-  - Default: All weekday images (Monday-Friday)
-  - `last3days`: Images from the last 3 days (including weekends)
+  - Default: All weekday images (Monday-Friday) - created only on weekends
+  - `last2days`: Images from the last 2 days (including weekends) - created daily
   - `lastXdays`: Images from the last X days (including weekends)
 - **GIF**: Compressed animated GIFs for quick viewing (`create_timelapse.py`)
 - **Last 3 Days**: Dedicated script for recent activity (`create_timelapse_last3days.py`)
@@ -48,7 +48,8 @@ Two types of timelapse media are created:
 ### Automation
 GitHub Actions workflows handle:
 - **Image Fetching**: Runs every 10 minutes (configurable cron schedule)
-- **Timelapse Creation**: Runs daily at midnight to create and deploy new timelapse videos
+- **Daily Timelapse Creation**: Runs daily at midnight to create 2-day timelapse videos
+- **Weekend Timelapse Creation**: Runs on weekends at midnight to create full timelapse videos
 
 ## 📁 Repository Structure
 
@@ -90,7 +91,7 @@ iarcamera/
    ```bash
    python create_timelapse.py        # For GIF
    python create_timelapse_video.py  # For MP4 (all weekdays)
-   python create_timelapse_video.py last3days  # For MP4 (last 3 days)
+   python create_timelapse_video.py last2days  # For MP4 (last 2 days)
    python create_timelapse_video.py last7days  # For MP4 (last 7 days)
    python create_timelapse_last3days.py        # Dedicated last 3 days script
    ```
@@ -98,14 +99,16 @@ iarcamera/
 ### GitHub Actions Configuration
 The workflows are configured to run automatically:
 - **Image fetching**: Every 10 minutes between 02-59 minutes past the hour
-- **Timelapse creation**: Daily at midnight (UTC)
+- **Daily timelapse creation**: Daily at midnight (UTC) - creates 2-day timelapse
+- **Weekend timelapse creation**: Weekends at midnight (UTC) - creates full timelapse
 
 ## 📊 Statistics
 
 - **Update Frequency**: Every 10 minutes
 - **Archive Start**: June 16, 2025
 - **Total Images**: Growing daily
-- **Timelapse Videos**: Updated daily
+- **Daily Timelapse Videos**: Updated daily (2-day timelapses)
+- **Full Timelapse Videos**: Updated on weekends
 
 ## 🛠️ Technical Details
 
