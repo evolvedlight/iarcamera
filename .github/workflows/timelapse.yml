@@ -1,12 +1,23 @@
-name: Create and Deploy Timelapse Video
+name: Create and Deploy Timelapse Videos
 
 on:
   schedule:
+    # Daily 2-day timelapse at midnight
     - cron: '0 0 * * *'
   workflow_dispatch:
+    inputs:
+      timelapse_type:
+        description: 'Type of timelapse to create'
+        required: false
+        default: 'both'
+        type: choice
+        options:
+        - both
+        - daily
+        - weekend
 
 jobs:
-  build:
+  timelapse:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -24,18 +35,44 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Create Timelapse Video
+      - name: Determine what to run
+        id: determine_job
+        run: |
+          # Check if this is a manual trigger
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "timelapse_type=${{ github.event.inputs.timelapse_type }}" >> $GITHUB_OUTPUT
+          else
+            # For scheduled runs, check day of week
+            day_of_week=$(date +%u)  # 1=Monday, 7=Sunday
+            if [ $day_of_week -eq 6 ] || [ $day_of_week -eq 7 ]; then
+              echo "timelapse_type=weekend" >> $GITHUB_OUTPUT
+            else
+              echo "timelapse_type=daily" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Create 2-Day Timelapse Video
+        if: steps.determine_job.outputs.timelapse_type == 'daily' || steps.determine_job.outputs.timelapse_type == 'both'
+        run: python create_timelapse_video.py last2days
+
+      - name: Create Long Timelapse Video
+        if: steps.determine_job.outputs.timelapse_type == 'weekend' || steps.determine_job.outputs.timelapse_type == 'both'
         run: python create_timelapse_video.py
 
-      - name: Create index.html
+      - name: Create timelapse GIF
+        run: python create_timelapse.py
+
+      - name: Create index.html for daily timelapse
+        if: steps.determine_job.outputs.timelapse_type == 'daily' || steps.determine_job.outputs.timelapse_type == 'both'
         run: |
+          mkdir -p _site
           cat > _site/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="en">
           <head>
               <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-              <title>Timelapse Video - IP Camera</title>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+              <title>2-Day Timelapse Video - IP Camera</title>
               
               <!-- Video.js CSS -->
               <link href="https://vjs.zencdn.net/8.16.1/video-js.css" rel="stylesheet">
@@ -161,7 +198,205 @@ jobs:
           <body>
               <div class="container">
                   <div class="header">
-                      <h1>IP Camera Timelapse</h1>
+                      <h1>IP Camera 2-Day Timelapse</h1>
+                      <p>Updated daily at midnight</p>
+                  </div>
+                  <div class="video-container">
+                      <div class="loading-overlay" id="loading-overlay">
+                          <div class="spinner"></div>
+                          <span>Loading video...</span>
+                      </div>
+                      <video
+                          id="timelapse-video"
+                          class="video-js"
+                          controls
+                          preload="metadata"
+                          data-setup="{}"
+                          poster="timelapse.gif"
+                          width="1280"
+                          height="720"
+                          playsinline
+                          webkit-playsinline>
+                          <source src="timelapse_last2days.mp4" type="video/mp4">
+                      </video>
+                  </div>
+              </div>
+
+              <!-- Video.js JavaScript -->
+              <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
+              
+              <script>
+                  // Initialize Video.js player
+                  var player = videojs('timelapse-video', {
+                      preload: 'metadata',
+                      responsive: true,
+                      controls: true,
+                      playbackRates: [0.5, 1, 1.5, 2],
+                      bigPlayButton: true,
+                      textTrackSettings: false,
+                      debug: false
+                  });
+
+                  // Handle loading states
+                  var loadingOverlay = document.getElementById('loading-overlay');
+                  function hideOverlay() {
+                      loadingOverlay.classList.add('hidden');
+                  }
+                  function showOverlay() {
+                      loadingOverlay.classList.remove('hidden');
+                  }
+                  player.ready(function() {
+                      player.on('canplay', hideOverlay);
+                      player.on('playing', hideOverlay);
+                      player.on('waiting', showOverlay);
+                      player.on('error', function() {
+                          loadingOverlay.innerHTML = '<div style="text-align: center;"><h3>Error loading video</h3><p>Please refresh the page to try again.</p></div>';
+                          showOverlay();
+                      });
+                  });
+              </script>
+          </body>
+          </html>
+          EOF
+
+      - name: Create index.html for weekend timelapse
+        if: steps.determine_job.outputs.timelapse_type == 'weekend' || steps.determine_job.outputs.timelapse_type == 'both'
+        run: |
+          mkdir -p _site
+          cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+              <title>Full Timelapse Video - IP Camera</title>
+              
+              <!-- Video.js CSS -->
+              <link href="https://vjs.zencdn.net/8.16.1/video-js.css" rel="stylesheet">
+              <style>
+                  /* Remove Video.js branding and watermark */
+                  .vjs-logo, .vjs-watermark, .vjs-control-bar .vjs-branding-link, .vjs-control-bar .vjs-branding {
+                      display: none !important;
+                  }
+                  /* Remove big play button branding */
+                  .video-js .vjs-big-play-button::before {
+                      display: none !important;
+                  }
+                  /* Remove any default skin background */
+                  .video-js {
+                      background: #000 !important;
+                  }
+                  
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                      margin: 0;
+                      padding: 20px;
+                      background-color: #f5f5f5;
+                  }
+                  
+                  .container {
+                      max-width: 1200px;
+                      margin: 0 auto;
+                      background: white;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                      overflow: hidden;
+                  }
+                  
+                  .header {
+                      padding: 20px;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                  }
+                  
+                  .header h1 {
+                      margin: 0;
+                      font-size: 2rem;
+                      font-weight: 600;
+                  }
+                  
+                  .header p {
+                      margin: 10px 0 0 0;
+                      opacity: 0.9;
+                  }
+                  
+                  .video-container {
+                      position: relative;
+                      background: #000;
+                  }
+                  
+                  .video-js {
+                      width: 100%;
+                      height: auto;
+                  }
+                  
+                  .video-js .vjs-big-play-button {
+                      background-color: rgba(43, 51, 63, 0.8);
+                      border: none;
+                      border-radius: 50%;
+                      width: 80px;
+                      height: 80px;
+                      line-height: 80px;
+                      font-size: 2.5rem;
+                      top: 50%;
+                      left: 50%;
+                      transform: translate(-50%, -50%);
+                  }
+                  
+                  .video-js .vjs-big-play-button:hover {
+                      background-color: rgba(43, 51, 63, 1);
+                  }
+                  
+                  .loading-overlay {
+                      position: absolute;
+                      top: 0;
+                      left: 0;
+                      width: 100%;
+                      height: 100%;
+                      background: rgba(0,0,0,0.8);
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      color: white;
+                      font-size: 1.2rem;
+                      z-index: 1000;
+                  }
+                  
+                  .loading-overlay.hidden {
+                      display: none;
+                  }
+                  
+                  .spinner {
+                      border: 3px solid rgba(255,255,255,0.3);
+                      border-radius: 50%;
+                      border-top: 3px solid white;
+                      width: 40px;
+                      height: 40px;
+                      animation: spin 1s linear infinite;
+                      margin-right: 15px;
+                  }
+                  
+                  @keyframes spin {
+                      0% { transform: rotate(0deg); }
+                      100% { transform: rotate(360deg); }
+                  }
+                  
+                  @media (max-width: 768px) {
+                      body {
+                          padding: 10px;
+                      }
+                      
+                      .header h1 {
+                          font-size: 1.5rem;
+                      }
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <div class="header">
+                      <h1>IP Camera Full Timelapse</h1>
+                      <p>Updated on weekends</p>
                   </div>
                   <div class="video-container">
                       <div class="loading-overlay" id="loading-overlay">
@@ -180,7 +415,6 @@ jobs:
                           playsinline
                           webkit-playsinline>
                           <source src="timelapse.mp4" type="video/mp4">
-                          <!-- No Video.js branding or links -->
                       </video>
                   </div>
               </div>
@@ -189,23 +423,12 @@ jobs:
               <script src="https://vjs.zencdn.net/8.16.1/video.min.js"></script>
               
               <script>
-                  // Initialize Video.js player with performance optimizations
+                  // Initialize Video.js player
                   var player = videojs('timelapse-video', {
                       preload: 'metadata',
                       responsive: true,
-                      // Remove fluid/fill for mobile reliability
                       controls: true,
                       playbackRates: [0.5, 1, 1.5, 2],
-                      html5: {
-                          vhs: {
-                              enableLowInitialPlaylist: true,
-                              smoothQualityChange: true,
-                              overrideNative: true
-                          },
-                          nativeVideoTracks: false,
-                          nativeAudioTracks: false,
-                          nativeTextTracks: false
-                      },
                       bigPlayButton: true,
                       textTrackSettings: false,
                       debug: false
@@ -220,7 +443,6 @@ jobs:
                       loadingOverlay.classList.remove('hidden');
                   }
                   player.ready(function() {
-                      // Hide overlay when video is ready
                       player.on('canplay', hideOverlay);
                       player.on('playing', hideOverlay);
                       player.on('waiting', showOverlay);
@@ -228,72 +450,6 @@ jobs:
                           loadingOverlay.innerHTML = '<div style="text-align: center;"><h3>Error loading video</h3><p>Please refresh the page to try again.</p></div>';
                           showOverlay();
                       });
-                      // Touch support for play/pause
-                      var videoEl = document.getElementById('timelapse-video');
-                      videoEl.addEventListener('touchend', function(e) {
-                          if (player.paused()) {
-                              player.play();
-                          } else {
-                              player.pause();
-                          }
-                      });
-                      // Performance monitoring
-                      player.on('loadstart', function() {
-                          console.log('Video loading started');
-                      });
-                      player.on('progress', function() {
-                          var buffered = player.buffered();
-                          if (buffered.length > 0) {
-                              var percent = (buffered.end(0) / player.duration()) * 100;
-                              console.log('Buffered: ' + Math.round(percent) + '%');
-                          }
-                      });
-                      // Adaptive quality for slow connections
-                      if ('connection' in navigator) {
-                          var connection = navigator.connection;
-                          if (connection.effectiveType === 'slow-2g' || connection.effectiveType === '2g') {
-                              player.playbackRate(0.5);
-                          }
-                      }
-                  });
-
-                  // Keyboard shortcuts for better UX
-                  document.addEventListener('keydown', function(e) {
-                      if (player && !player.paused()) {
-                          switch(e.key) {
-                              case ' ':
-                                  e.preventDefault();
-                                  if (player.paused()) {
-                                      player.play();
-                                  } else {
-                                      player.pause();
-                                  }
-                                  break;
-                              case 'ArrowLeft':
-                                  e.preventDefault();
-                                  player.currentTime(player.currentTime() - 10);
-                                  break;
-                              case 'ArrowRight':
-                                  e.preventDefault();
-                                  player.currentTime(player.currentTime() + 10);
-                                  break;
-                              case 'ArrowUp':
-                                  e.preventDefault();
-                                  player.volume(Math.min(1, player.volume() + 0.1));
-                                  break;
-                              case 'ArrowDown':
-                                  e.preventDefault();
-                                  player.volume(Math.max(0, player.volume() - 0.1));
-                                  break;
-                          }
-                      }
-                  });
-
-                  // Cleanup on page unload
-                  window.addEventListener('beforeunload', function() {
-                      if (player) {
-                          player.dispose();
-                      }
                   });
               </script>
           </body>
@@ -306,7 +462,7 @@ jobs:
           path: '_site'
 
   deploy:
-    needs: build
+    needs: timelapse
     permissions:
       pages: write
       id-token: write
