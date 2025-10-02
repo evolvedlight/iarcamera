@@ -59,9 +59,6 @@ jobs:
         if: steps.determine_job.outputs.timelapse_type == 'weekend' || steps.determine_job.outputs.timelapse_type == 'both'
         run: python create_timelapse_video.py
 
-      - name: Create timelapse GIF
-        run: python create_timelapse.py
-
       - name: Create index.html for daily timelapse
         if: steps.determine_job.outputs.timelapse_type == 'daily' || steps.determine_job.outputs.timelapse_type == 'both'
         run: |
@@ -212,7 +209,6 @@ jobs:
                           controls
                           preload="metadata"
                           data-setup="{}"
-                          poster="timelapse.gif"
                           width="1280"
                           height="720"
                           playsinline
@@ -409,7 +405,6 @@ jobs:
                           controls
                           preload="metadata"
                           data-setup="{}"
-                          poster="timelapse.gif"
                           width="1280"
                           height="720"
                           playsinline
