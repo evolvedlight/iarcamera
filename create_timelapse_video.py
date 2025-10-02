@@ -18,11 +18,11 @@ def create_timelapse_video(days_filter=None, weekdays_only=True):
     
     # Determine output filename based on filter
     if days_filter:
-        output_video = os.path.join(output_dir, f'timelapse_last{days_filter}days.mp4')
+        output_video = os.path.join(output_dir, f'timelapse_last{days_filter}days.webm')
     else:
-        output_video = os.path.join(output_dir, 'timelapse.mp4')
+        output_video = os.path.join(output_dir, 'timelapse.webm')
         
-    max_width = 1280  # Increase resolution for higher quality
+    max_width = 960   # Reduced resolution for smaller file size
     fps = 10         # Increase frame rate for smoother video
     bitrate = '5000k'  # Target bitrate for higher quality
 
@@ -112,7 +112,7 @@ def create_timelapse_video(days_filter=None, weekdays_only=True):
 
     # Get frame size
     height, width, _ = frames[0].shape
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    fourcc = cv2.VideoWriter_fourcc(*'VP80')  # VP8 codec for WebM
     out = cv2.VideoWriter(output_video, fourcc, fps, (width, height))
 
     for frame in frames:
@@ -123,15 +123,16 @@ def create_timelapse_video(days_filter=None, weekdays_only=True):
     # Optionally, re-encode with ffmpeg for even higher quality and web compatibility
     try:
         import subprocess
-        temp_video_name = f'timelapse_last{days_filter}days_temp.mp4' if days_filter else 'timelapse_temp.mp4'
+        temp_video_name = f'timelapse_last{days_filter}days_temp.webm' if days_filter else 'timelapse_temp.webm'
         temp_video = os.path.join(output_dir, temp_video_name)
         os.rename(output_video, temp_video)
         ffmpeg_cmd = [
             'ffmpeg', '-y', '-i', temp_video,
-            '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-b:v', bitrate,
-            '-pix_fmt', 'yuv420p', output_video
+            '-c:v', 'libvpx-vp9', '-crf', '35', '-b:v', '0',
+            '-row-mt', '1', '-threads', '4',
+            output_video
         ]
-        print('Running ffmpeg for final encoding...')
+        print('Running ffmpeg for final encoding to WebM...')
         subprocess.run(ffmpeg_cmd, check=True)
         os.remove(temp_video)
         filter_desc = ""
@@ -139,11 +140,11 @@ def create_timelapse_video(days_filter=None, weekdays_only=True):
             filter_desc += f"(last {days_filter} days) "
         if weekdays_only:
             filter_desc += "(weekdays only) "
-        print(f"Final high-quality timelapse video {filter_desc}saved to {output_video}")
+        print(f"Final optimized WebM timelapse video {filter_desc}saved to {output_video}")
     except Exception as e:
         print(f"ffmpeg not available or failed: {e}")
         # If ffmpeg fails, rename the temp file back to the final name
-        temp_video_name = f'timelapse_last{days_filter}days_temp.mp4' if days_filter else 'timelapse_temp.mp4'
+        temp_video_name = f'timelapse_last{days_filter}days_temp.webm' if days_filter else 'timelapse_temp.webm'
         temp_video = os.path.join(output_dir, temp_video_name)
         if os.path.exists(temp_video):
             os.rename(temp_video, output_video)

@@ -199,7 +199,7 @@ jobs:
               <div class="container">
                   <div class="header">
                       <h1>IP Camera 2-Day Timelapse</h1>
-                      <p>Updated daily at midnight</p>
+                      <p>Updated daily at midnight | <a href="timelapse.webm" download style="color: white; text-decoration: underline;">Download full timelapse video</a></p>
                   </div>
                   <div class="video-container">
                       <div class="loading-overlay" id="loading-overlay">
@@ -217,7 +217,7 @@ jobs:
                           height="720"
                           playsinline
                           webkit-playsinline>
-                          <source src="timelapse_last2days.mp4" type="video/mp4">
+                          <source src="timelapse_last2days.webm" type="video/webm">
                       </video>
                   </div>
               </div>
@@ -414,7 +414,7 @@ jobs:
                           height="720"
                           playsinline
                           webkit-playsinline>
-                          <source src="timelapse.mp4" type="video/mp4">
+                          <source src="timelapse.webm" type="video/webm">
                       </video>
                   </div>
               </div>
