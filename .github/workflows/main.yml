@@ -16,9 +16,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            get_image.py
+          sparse-checkout-cone-mode: false
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
@@ -29,6 +33,8 @@ jobs:
 
       - name: Run script
         id: fetch_image
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python get_image.py
 
       - name: Report status
@@ -37,21 +43,3 @@ jobs:
           echo "Skipped image: ${{ steps.fetch_image.outputs.skipped_image_path }}"
           echo "Latest image: ${{ steps.fetch_image.outputs.latest_image_path }}"
           echo "Status: ${{ steps.fetch_image.outputs.status }}"
-
-      - name: Commit and push if it changed
-        if: steps.fetch_image.outputs.new_image_path != ''
-        run: |
-          git config --global user.name 'github-actions'
-          git config --global user.email 'github-actions@github.com'
-
-          # Add files to staging (no harm if file doesn't exist)
-          git add "${{ steps.fetch_image.outputs.new_image_path }}" || true
-          git add "${{ steps.fetch_image.outputs.latest_image_path }}" || true
-
-          # Only commit if there are staged changes
-          if ! git diff --cached --quiet; then
-            git commit -m "Update images: ${{ steps.fetch_image.outputs.new_image_path }}, ${{ steps.fetch_image.outputs.latest_image_path }}"
-            git push
-          else
-            echo "No changes to commit."
-          fi
