@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAR Camera - Timelapse Scrubbing UI</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar: Date Selector -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>IAR Camera 📸</h2>
+                <p>Timelapse Explorer</p>
+            </div>
+            
+            <div class="presets-section">
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button class="preset-btn" data-preset="1">Today</button>
+                    <button class="preset-btn active" data-preset="3">Last 3 Days</button>
+                    <button class="preset-btn" data-preset="7">Last 7 Days</button>
+                    <button class="preset-btn" data-preset="30">Last Month</button>
+                    <button class="preset-btn" data-preset="all">All Time</button>
+                </div>
+            </div>
+            
+            <div class="date-selector-section">
+                <div class="section-title-row">
+                    <h3>Select Days</h3>
+                    <div class="bulk-actions">
+                        <button id="btn-select-all" class="text-link-btn">All</button>
+                        <span class="divider">|</span>
+                        <button id="btn-select-none" class="text-link-btn">None</button>
+                    </div>
+                </div>
+                <div class="date-list-container">
+                    <div id="date-list" class="date-list">
+                        <!-- Dates will be populated dynamically -->
+                        <div class="loading-mini">Loading dates...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <button id="btn-help-trigger" class="help-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/></svg>
+                    Keyboard Shortcuts (?)
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Viewer Panel -->
+        <main class="viewer-panel">
+            <header class="viewer-header">
+                <div class="info-meta">
+                    <h1 id="txt-current-date">Loading...</h1>
+                    <span id="txt-current-filename" class="filename-badge">filename.jpg</span>
+                </div>
+                <div class="viewer-stats">
+                    <div class="stat-badge">
+                        <span class="stat-label">Frame:</span>
+                        <span id="txt-frame-index" class="stat-val">0 / 0</span>
+                    </div>
+                    <div id="badge-zoom" class="stat-badge zoom-badge hidden">
+                        <span class="stat-label">Zoom:</span>
+                        <span id="txt-zoom-level" class="stat-val">100%</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Image Viewport -->
+            <div class="viewport-outer">
+                <div id="viewer-viewport" class="viewport-inner">
+                    <div id="image-container" class="image-container">
+                        <!-- Double buffering for flicker-free rendering -->
+                        <img id="img-active" class="timelapse-img active" alt="Timelapse frame" draggable="false">
+                        <img id="img-buffer" class="timelapse-img" alt="Timelapse frame buffer" draggable="false">
+                    </div>
+                    
+                    <!-- Loading Spinner Overlay -->
+                    <div id="loading-overlay" class="loading-overlay hidden">
+                        <div class="spinner"></div>
+                    </div>
+
+                    <!-- Centered Play/Pause State Indicator HUD -->
+                    <div id="hud-overlay" class="hud-overlay">
+                        <div class="hud-center-icon play-icon hidden">
+                            <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+                        </div>
+                        <div class="hud-center-icon pause-icon hidden">
+                            <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </div>
+                    </div>
+
+                    <!-- Glass HUD Overlay -->
+                    <div class="glass-hud">
+                        <div class="hud-time" id="txt-hud-time">--:--:--</div>
+                        <div class="hud-date" id="txt-hud-date">----------</div>
+                    </div>
+                    
+                    <!-- Drag & Zoom Hint -->
+                    <div class="zoom-hint">Scroll to zoom • Drag to pan</div>
+                </div>
+            </div>
+
+            <!-- Controller Bar -->
+            <section class="controls-section">
+                <!-- Timeline Slider Row -->
+                <div class="timeline-row">
+                    <div class="timeline-container">
+                        <input type="range" id="slider-timeline" class="timeline-slider" min="0" max="100" value="0" step="1">
+                        <div id="timeline-tooltip" class="timeline-tooltip hidden">12:00 PM</div>
+                        <div id="timeline-ticks" class="timeline-ticks"></div>
+                    </div>
+                </div>
+
+                <!-- Controls Buttons Row -->
+                <div class="controls-row">
+                    <div class="control-group navigation">
+                        <button id="btn-first" class="ctrl-btn" title="First Frame [Home]">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M6 6h2v12H6zm3.5 6L18 6v12z"/></svg>
+                        </button>
+                        <button id="btn-jump-back" class="ctrl-btn" title="Back 10 Frames [ [ ]">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+                        </button>
+                        <button id="btn-prev" class="ctrl-btn" title="Previous Frame [Left Arrow]">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                        </button>
+                        
+                        <button id="btn-play-pause" class="ctrl-btn play-btn" title="Play / Pause [Space]">
+                            <span class="icon-play">
+                                <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
+                            </span>
+                            <span class="icon-pause hidden">
+                                <svg viewBox="0 0 24 24" width="28" height="28"><path fill="currentColor" d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            </span>
+                        </button>
+
+                        <button id="btn-next" class="ctrl-btn" title="Next Frame [Right Arrow]">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                        </button>
+                        <button id="btn-jump-forward" class="ctrl-btn" title="Forward 10 Frames [ ] ]">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+                        </button>
+                        <button id="btn-last" class="ctrl-btn" title="Last Frame [End]">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M4 18l8.5-6L4 6v12zM16 6h2v12h-2z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="control-group settings">
+                        <!-- Speed Control -->
+                        <div class="setting-item">
+                            <label for="select-speed">Speed:</label>
+                            <div class="select-wrapper">
+                                <select id="select-speed" class="custom-select">
+                                    <option value="1">1 fps</option>
+                                    <option value="2">2 fps</option>
+                                    <option value="5">5 fps</option>
+                                    <option value="10" selected>10 fps</option>
+                                    <option value="15">15 fps</option>
+                                    <option value="20">20 fps</option>
+                                    <option value="30">30 fps</option>
+                                    <option value="60">60 fps</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Loop Control -->
+                        <button id="btn-loop" class="ctrl-btn toggle-btn active" title="Toggle Loop [L]">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+                            <span>Loop</span>
+                        </button>
+
+                        <span class="divider-v"></span>
+
+                        <!-- Zoom Reset -->
+                        <button id="btn-reset-zoom" class="ctrl-btn" title="Reset Zoom & Pan [Z]">
+                            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                            <span>Reset Zoom</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="help-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Keyboard Shortcuts</h2>
+                <button id="btn-modal-close" class="modal-close-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <table class="shortcuts-table">
+                    <thead>
+                        <tr>
+                            <th>Key</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><kbd>Space</kbd></td>
+                            <td>Play / Pause Timelapse</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>→</kbd> or <kbd>D</kbd></td>
+                            <td>Next Frame</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>←</kbd> or <kbd>A</kbd></td>
+                            <td>Previous Frame</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>]</kbd> or <kbd>E</kbd></td>
+                            <td>Forward 10 Frames</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>[</kbd> or <kbd>Q</kbd></td>
+                            <td>Backward 10 Frames</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>↑</kbd> or <kbd>W</kbd></td>
+                            <td>Increase Playback Speed</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>↓</kbd> or <kbd>S</kbd></td>
+                            <td>Decrease Playback Speed</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>L</kbd></td>
+                            <td>Toggle Playback Loop</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Z</kbd> or <kbd>R</kbd> or <kbd>Double Click</kbd></td>
+                            <td>Reset Zoom & Pan</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>Home</kbd></td>
+                            <td>Jump to First Frame</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>End</kbd></td>
+                            <td>Jump to Last Frame</td>
+                        </tr>
+                        <tr>
+                            <td><kbd>?</kbd></td>
+                            <td>Toggle Help Dialog</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="modal-tip">
+                    <strong>Pro-tip:</strong> You can zoom in on the camera image by scrolling your mouse wheel, and pan around by clicking and dragging.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Entry -->
+    <script src="app.js"></script>
+</body>
+</html>

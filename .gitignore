@@ -4,3 +4,16 @@ _site/*
 __pycache__/
 *.py[cod]
 *$py.class
+
+# .NET build and user artifacts
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE and Editor files
+.vs/
+.vscode/
+.idea/

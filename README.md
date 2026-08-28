@@ -55,6 +55,11 @@ GitHub Actions workflows handle:
 
 ```
 iarcamera/
+├── web/                          # Interactive Timelapse Scrubbing Web UI
+│   ├── index.html                # UI markup, controls, and HUD overlay
+│   ├── styles.css                # Dark theme UI styling and animations
+│   └── app.js                    # Scrubbing, smooth playback, zoom/pan & preloading
+├── server-dotnet/                # High-performance .NET 10 Kestrel server
 ├── get_image.py                  # Main image fetching script
 ├── create_timelapse.py           # GIF timelapse generator
 ├── create_timelapse_video.py     # Video timelapse generator (with date filtering)
@@ -64,22 +69,22 @@ iarcamera/
 │   ├── 2025-06-16/
 │   ├── 2025-06-17/
 │   └── ...
-├── latest.jpg               # Most recent image (static link)
-└── .github/workflows/       # GitHub Actions automation
-    ├── main.yml            # Image fetching workflow
-    └── timelapse.yml       # Timelapse creation workflow
+├── latest.jpg                    # Most recent image (static link)
+└── .github/workflows/            # GitHub Actions automation
+    ├── main.yml                  # Image fetching workflow
+    └── timelapse.yml             # Timelapse creation workflow
 ```
 
 ## 🚀 Setup and Configuration
 
 ### Prerequisites
-- Python 3.x
+- Python 3.x (optional: for image fetching / CLI video rendering)
 - Required packages: `requests`, `Pillow`, `opencv-python`, `numpy`
 - FFmpeg (for video creation)
 
 ### Running Locally
 1. Clone the repository
-2. Install dependencies:
+2. Install dependencies (for scripts):
    ```bash
    pip install requests Pillow opencv-python numpy
    ```
@@ -95,6 +100,21 @@ iarcamera/
    python create_timelapse_video.py last7days  # For MP4 (last 7 days)
    python create_timelapse_last3days.py        # Dedicated last 3 days script
    ```
+5. Launch the Interactive Scrubbing Viewer:
+   - **PowerShell (Native Windows, zero dependencies):**
+     ```powershell
+     powershell.exe -ExecutionPolicy Bypass -File server.ps1
+     ```
+   - **Python (Cross-platform, zero dependencies):**
+     ```bash
+     python server.py
+     ```
+   - **.NET 10 (Ultra-fast compiled server with in-memory caching):**
+     ```powershell
+     .\server-dotnet.ps1
+     ```
+   Then open [**http://localhost:8000**](http://localhost:8000) in your web browser.
+
 
 ### GitHub Actions Configuration
 The workflows are configured to run automatically:
